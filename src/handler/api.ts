@@ -99,7 +99,53 @@ export class ApiHandler {
      * @returns A response model with the status code and the updated machine's state.
      */
     private handleStartMachine(request: StartMachineRequestModel): MachineResponseModel {
-        // Your implementation here
+        const machineTable = MachineStateTable.getInstance();
+        const machine = machineTable.getMachine(request.machineId);
+        
+        if (!machine) {
+            return { statusCode: HttpResponseCode.NOT_FOUND };
+        }
+        
+        // Validate machine status
+        if (machine.status !== MachineStatus.AWAITING_DROPOFF) {
+            return {
+                statusCode: HttpResponseCode.BAD_REQUEST,
+                machine: machine
+            };
+        }
+        
+        // Start the cycle
+        const smartMachineClient = SmartMachineClient.getInstance();
+        try {
+            smartMachineClient.startCycle(request.machineId);
+            machineTable.updateMachineStatus(request.machineId, MachineStatus.RUNNING);
+            const updatedMachine = machineTable.getMachine(request.machineId);
+            
+            if (!updatedMachine) {
+                return { statusCode: HttpResponseCode.INTERNAL_SERVER_ERROR };
+            }
+            
+            this.cache.put(request.machineId, updatedMachine);
+            
+            return {
+                statusCode: HttpResponseCode.OK,
+                machine: updatedMachine
+            };
+        } catch (error) {
+            machineTable.updateMachineStatus(request.machineId, MachineStatus.ERROR);
+            const errorMachine = machineTable.getMachine(request.machineId);
+            
+            if (!errorMachine) {
+                return { statusCode: HttpResponseCode.INTERNAL_SERVER_ERROR };
+            }
+            
+            this.cache.put(request.machineId, errorMachine);
+            
+            return {
+                statusCode: HttpResponseCode.HARDWARE_ERROR,
+                machine: errorMachine
+            };
+        }
     }
 
     /**
