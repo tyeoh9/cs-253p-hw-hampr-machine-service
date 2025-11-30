@@ -23,8 +23,7 @@ export class ApiHandler {
     private checkToken(token: string) {
         const idp = IdentityProviderClient.getInstance();
         if (!idp.validateToken(token)) {
-            throw new Error(`Error code ${HttpResponseCode.UNAUTHORIZED}, Message: Invalid token`)
-            };
+            throw new Error(`Error code ${HttpResponseCode.UNAUTHORIZED}, Message: Invalid token`);
         }
     }
 
@@ -38,7 +37,26 @@ export class ApiHandler {
      * @returns A response model with the status code and the reserved machine's state.
      */
     private handleRequestMachine(request: RequestMachineRequestModel): MachineResponseModel {
-        // Your implementation here
+        
+        // Get available machine
+        const machineTable = MachineStateTable.getInstance();
+        const machines = machineTable.listMachinesAtLocation(request.locationId);
+        const availableMachine = machines.find(machine => machine.status === MachineStatus.AVAILABLE);
+        
+        if (!availableMachine) {
+            return { statusCode: HttpResponseCode.NOT_FOUND };
+        }
+        
+        // Update machine status
+        machineTable.updateMachineStatus(availableMachine.machineId, MachineStatus.AWAITING_DROPOFF);
+        machineTable.updateMachineJobId(availableMachine.machineId, request.jobId);
+        
+        this.cache.put(availableMachine.machineId, availableMachine);
+        
+        return {
+            statusCode: HttpResponseCode.OK,
+            machine: updatedMachine
+        };
     }
 
     /**
@@ -49,6 +67,7 @@ export class ApiHandler {
      */
     private handleGetMachine(request: GetMachineRequestModel): MachineResponseModel {
         // Your implementation here
+
     }
 
     /**
