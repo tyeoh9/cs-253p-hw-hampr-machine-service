@@ -21,7 +21,11 @@ export class ApiHandler {
      * @throws An error if the token is invalid.
      */
     private checkToken(token: string) {
-        // Your implementation here
+        const idp = IdentityProviderClient.getInstance();
+        if (!idp.validateToken(token)) {
+            throw new Error(`Error code ${HttpResponseCode.UNAUTHORIZED}, Message: Invalid token`)
+            };
+        }
     }
 
     /**
