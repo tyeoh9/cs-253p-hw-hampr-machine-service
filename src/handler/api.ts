@@ -53,11 +53,19 @@ export class ApiHandler {
         machineTable.updateMachineStatus(availableMachine.machineId, MachineStatus.AWAITING_DROPOFF);
         machineTable.updateMachineJobId(availableMachine.machineId, request.jobId);
         
-        this.cache.put(availableMachine.machineId, availableMachine);
+        // Get the updated machine from the database
+        const updatedMachine = machineTable.getMachine(availableMachine.machineId);
+        
+        if (!updatedMachine) {
+            return { statusCode: HttpResponseCode.INTERNAL_SERVER_ERROR };
+        }
+        
+        // Cache the updated machine
+        this.cache.put(updatedMachine.machineId, updatedMachine);
         
         return {
             statusCode: HttpResponseCode.OK,
-            machine: availableMachine
+            machine: updatedMachine
         };
     }
 
