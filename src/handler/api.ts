@@ -23,7 +23,10 @@ export class ApiHandler {
     private checkToken(token: string) {
         const idp = IdentityProviderClient.getInstance();
         if (!idp.validateToken(token)) {
-            throw new Error(`Error code ${HttpResponseCode.UNAUTHORIZED}, Message: Invalid token`);
+            throw new Error(JSON.stringify({
+                statusCode: HttpResponseCode.UNAUTHORIZED,
+                message: 'Invalid token'
+            }));
         }
     }
 
