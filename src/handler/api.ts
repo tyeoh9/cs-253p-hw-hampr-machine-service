@@ -37,7 +37,6 @@ export class ApiHandler {
      * @returns A response model with the status code and the reserved machine's state.
      */
     private handleRequestMachine(request: RequestMachineRequestModel): MachineResponseModel {
-        
         // Get available machine
         const machineTable = MachineStateTable.getInstance();
         const machines = machineTable.listMachinesAtLocation(request.locationId);
@@ -55,7 +54,7 @@ export class ApiHandler {
         
         return {
             statusCode: HttpResponseCode.OK,
-            machine: updatedMachine
+            machine: availableMachine
         };
     }
 
@@ -66,8 +65,30 @@ export class ApiHandler {
      * @returns A response model with the status code and the machine's state.
      */
     private handleGetMachine(request: GetMachineRequestModel): MachineResponseModel {
-        // Your implementation here
-
+        // Check cache 
+        const cachedMachine = this.cache.get(request.machineId);
+        if (cachedMachine !== undefined) {
+            return {
+                statusCode: HttpResponseCode.OK,
+                machine: cachedMachine
+            };
+        }
+        
+        // Fetch from database
+        const machineTable = MachineStateTable.getInstance();
+        const machine = machineTable.getMachine(request.machineId);
+        
+        if (!machine) {
+            return { statusCode: HttpResponseCode.NOT_FOUND };
+        }
+        
+        // Cache this machine
+        this.cache.put(request.machineId, machine);
+        
+        return {
+            statusCode: HttpResponseCode.OK,
+            machine: machine
+        };
     }
 
     /**
